@@ -91,6 +91,7 @@ module_exit(message_slot_cleanup);
 // and allocates per-file descriptor state.
 static int device_open(struct inode* inode, struct file* file) {
     int minor = iminor(inode);
+    fd_state_t* state;
 
     // Search for existing slot with matching minor number
     slot_t* slot = slot_list_head;
@@ -115,15 +116,13 @@ static int device_open(struct inode* inode, struct file* file) {
     }
 
     // Allocate and initialize per-file descriptor state
-    fd_state_t* state = kmalloc(sizeof(fd_state_t), GFP_KERNEL);
+    state = kmalloc(sizeof(fd_state_t), GFP_KERNEL);
     if (!state) {
         return -ENOMEM;
     }
-
     state->channel_id = 0;           // Default channel ID is 0 (no channel selected)
     state->censorship_enabled = 0;   // Censorship disabled by default
     file->private_data = state;      // Store state in file's private data
-
     return 0;
 }
 
@@ -166,7 +165,6 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     channel_t* channel;
     int minor;
     char* kbuf;
-    size_t i;
 
     // Validate input
     if (!file || !file->private_data || !buffer) {
